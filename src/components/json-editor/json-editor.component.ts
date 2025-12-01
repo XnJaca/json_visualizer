@@ -5,11 +5,24 @@ import { Component, input, output, signal, ElementRef, viewChild } from '@angula
   selector: 'app-json-editor',
   standalone: true,
   template: `
-    <div class="flex flex-col h-full bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transition-colors duration-300">
-      <div class="flex items-center justify-between p-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300">
-        <span class="text-sm font-semibold text-zinc-600 dark:text-zinc-300">JSON Input</span>
+    <div class="flex flex-col h-full bg-white dark:bg-zinc-900 overflow-hidden transition-colors duration-300">
+      <div class="flex items-center justify-between p-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300 shrink-0">
+        <span class="text-sm font-semibold text-zinc-600 dark:text-zinc-300">Input</span>
         <div class="flex gap-2">
-            <!-- Feature 2: Download JSON -->
+            
+          <!-- Feature 3: Tools Menu -->
+          <div class="relative group">
+            <button class="px-2 py-1 text-xs bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded border border-zinc-200 dark:border-zinc-700 transition-colors flex items-center gap-1">
+               Tools
+               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            <div class="absolute right-0 mt-1 w-32 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <button (click)="sortKeys()" class="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">Sort Keys</button>
+                <button (click)="minifyJson()" class="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">Minify</button>
+                <button (click)="repairJson()" class="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">Repair (Simple)</button>
+            </div>
+          </div>
+
           <button (click)="downloadJson.emit()" class="px-2 py-1 text-xs bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded border border-zinc-200 dark:border-zinc-700 transition-colors flex items-center gap-1" title="Download JSON">
              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
           </button>
@@ -23,7 +36,7 @@ import { Component, input, output, signal, ElementRef, viewChild } from '@angula
       </div>
       
       <!-- Feature 1: Line Numbers + Textarea -->
-      <div class="relative flex-1 overflow-hidden flex">
+      <div class="relative flex-1 overflow-hidden flex min-h-0">
         <!-- Line Numbers Gutter -->
         <div 
           #lineNumbers
@@ -79,6 +92,69 @@ export class JsonEditorComponent {
     } catch (e) {
       // ignore format error
     }
+  }
+
+  // Feature 3: Sort Keys
+  sortKeys() {
+      try {
+          const current = this.jsonString();
+          if (!current.trim()) return;
+          const parsed = JSON.parse(current);
+          
+          const sortObject = (obj: any): any => {
+              if (Array.isArray(obj)) {
+                  return obj.map(sortObject);
+              } else if (obj !== null && typeof obj === 'object') {
+                  return Object.keys(obj)
+                      .sort()
+                      .reduce((acc: any, key) => {
+                          acc[key] = sortObject(obj[key]);
+                          return acc;
+                      }, {});
+              }
+              return obj;
+          };
+
+          const sorted = sortObject(parsed);
+          const formatted = JSON.stringify(sorted, null, 2);
+          this.updateLineNumbers(formatted);
+          this.jsonChange.emit(formatted);
+      } catch (e) {}
+  }
+
+  // Feature 3: Minify
+  minifyJson() {
+      try {
+          const current = this.jsonString();
+          const parsed = JSON.parse(current);
+          const minified = JSON.stringify(parsed);
+          this.updateLineNumbers(minified);
+          this.jsonChange.emit(minified);
+      } catch(e) {}
+  }
+
+  // Feature 3: Repair (Simple)
+  repairJson() {
+      let current = this.jsonString();
+      // Simple heuristics
+      // 1. Replace single quotes with double quotes
+      current = current.replace(/'/g, '"');
+      // 2. Remove trailing commas (simple regex, not perfect but helps)
+      current = current.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      // 3. Add quotes to unquoted keys (very basic)
+      current = current.replace(/(\w+):/g, '"$1":');
+
+      // Try to parse. If valid, format and emit.
+      try {
+          const parsed = JSON.parse(current);
+          const formatted = JSON.stringify(parsed, null, 2);
+          this.updateLineNumbers(formatted);
+          this.jsonChange.emit(formatted);
+      } catch (e) {
+          // If still invalid, just update the text with our best guess attempt
+          this.updateLineNumbers(current);
+          this.jsonChange.emit(current);
+      }
   }
 
   clearJson() {

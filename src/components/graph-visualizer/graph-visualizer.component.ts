@@ -1,5 +1,5 @@
 
-import { Component, input, signal, computed, effect, ElementRef, viewChild, inject } from '@angular/core';
+import { Component, input, output, signal, computed, effect, ElementRef, viewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GraphNode, JsonTransformService } from '../../services/json-transform.service';
 import { ThemeService } from '../../services/theme.service';
@@ -63,199 +63,34 @@ import mermaid from 'mermaid';
       <div class="flex-1 flex overflow-hidden relative">
         
         <!-- TREE VIEW IMPLEMENTATION -->
-        @if (viewMode() === 'tree') {
-          <!-- LEFT PANEL: TREE EXPLORER -->
-          <div class="w-1/3 min-w-[300px] flex flex-col border-r border-zinc-200 dark:border-zinc-800 h-full bg-zinc-50 dark:bg-[#0c0c0e] transition-colors duration-300">
-            <div class="flex-1 overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
-              @if (data()) {
-                <ng-container *ngTemplateOutlet="nodeTemplate; context: { $implicit: data() }"></ng-container>
-              } @else {
-                <div class="flex items-center justify-center h-full text-zinc-500 text-sm">No data</div>
-              }
-            </div>
-          </div>
-
-          <!-- RIGHT PANEL: INSPECTOR -->
-          <div class="flex-1 flex flex-col h-full bg-white dark:bg-[#09090b] relative overflow-hidden transition-colors duration-300">
-            @if (selectedNode(); as node) {
-              <!-- Breadcrumbs -->
-              <div class="h-10 flex items-center px-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/30 overflow-x-auto whitespace-nowrap custom-scrollbar shrink-0 transition-colors duration-300">
-                <div class="flex items-center text-xs text-zinc-500">
-                  @for (step of node.path; track step; let last = $last) {
-                    <span class="hover:text-zinc-800 dark:hover:text-zinc-300 cursor-pointer transition-colors">{{ step }}</span>
-                    @if (!last) {
-                      <svg class="w-3 h-3 mx-1 text-zinc-400 dark:text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    }
-                  }
-                </div>
-              </div>
-
-              <!-- Inspector Content -->
-              <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                
-                <!-- Header Info -->
-                <div class="mb-8">
-                  <div class="flex items-center gap-3 mb-2">
-                    <span [class]="getTypeColor(node.type) + ' px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-colors'">
-                      {{ node.type }}
-                    </span>
-                    <h2 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100 tracking-tight transition-colors">{{ node.key }}</h2>
-                  </div>
-                  <div class="text-zinc-500 text-sm font-mono flex items-center gap-4">
-                    <span>Items: {{ node.children.length + node.content.length }}</span>
-                    <span class="text-zinc-300 dark:text-zinc-700">|</span>
-                    <!-- Feature 3: Copy Path for Node -->
-                    <button 
-                        (click)="copyPath(node.path)" 
-                        class="flex items-center gap-1 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
-                        title="Copy full path">
-                        <span>ID: {{ node.id }}</span>
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Content Table (Primitives of Current Node) -->
-                @if (node.content.length > 0) {
-                  <div class="mb-8">
-                    <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                      Properties
-                    </h3>
-                    <div class="bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors">
-                      <table class="w-full text-left text-sm">
-                        <thead class="bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 transition-colors">
-                          <tr>
-                            <th class="px-4 py-2 font-medium w-1/3">Key</th>
-                            <th class="px-4 py-2 font-medium">Value</th>
-                            <th class="px-4 py-2 font-medium w-20 text-right">Type</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800/50">
-                          @for (prop of node.content; track prop.key) {
-                            <tr class="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                              <td class="px-4 py-2.5 font-mono text-zinc-600 dark:text-zinc-400 flex items-center justify-between">
-                                  {{ prop.key }}
-                                  <!-- Feature 3: Copy Path for Property -->
-                                  <button 
-                                    (click)="copyPath(node.path, prop.key)" 
-                                    class="text-zinc-300 dark:text-zinc-700 hover:text-cyan-600 dark:hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all"
-                                    title="Copy Path">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                  </button>
-                              </td>
-                              <td class="px-4 py-2.5 font-mono text-zinc-800 dark:text-zinc-300 break-all select-text">
-                                <span [class]="getValueColor(prop.type)">{{ formatValue(prop.value) }}</span>
-                              </td>
-                              <td class="px-4 py-2.5 text-right text-xs text-zinc-400 dark:text-zinc-600 group-hover:text-zinc-500">{{ prop.type }}</td>
-                            </tr>
-                          }
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                }
-
-                <!-- Children Inline Inspector (Nested Objects/Arrays) -->
-                @if (node.children.length > 0) {
-                  <div>
-                    <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                      Nested Structures
-                    </h3>
-                    
-                    <div class="flex flex-col gap-4">
-                      @for (child of node.children; track child.id) {
-                        <!-- Child Card -->
-                        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-900/20 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors overflow-hidden">
-                          
-                          <!-- Child Header -->
-                          <div class="flex items-center justify-between px-4 py-2 bg-zinc-100 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800">
-                            <div class="flex items-center gap-3">
-                                <div class="w-6 h-6 rounded flex items-center justify-center border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
-                                    @if (child.type === 'array') {
-                                        <span class="text-pink-500 text-[10px] font-bold">[]</span>
-                                    } @else {
-                                        <span class="text-cyan-500 text-[10px] font-bold">{{ '{}' }}</span>
-                                    }
-                                </div>
-                                <span class="font-mono text-sm font-semibold text-zinc-700 dark:text-zinc-200">{{ child.key }}</span>
-                                <span class="text-xs text-zinc-500">
-                                    {{ child.content.length }} props, {{ child.children.length }} nested
-                                </span>
-                            </div>
-                            <button 
-                                (click)="selectNode(child)"
-                                class="text-xs bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-300 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-700 transition-all flex items-center gap-1">
-                                Focus Node 
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            </button>
-                          </div>
-
-                          <!-- Child Content (Inline Primitives) -->
-                          @if (child.content.length > 0) {
-                            <div class="p-0">
-                               <table class="w-full text-left text-xs">
-                                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800/30">
-                                    @for (cProp of child.content; track cProp.key) {
-                                        <tr class="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 group/row transition-colors">
-                                            <td class="px-4 py-1.5 font-mono text-zinc-500 dark:text-zinc-500 w-1/3 border-r border-zinc-100 dark:border-zinc-800/30 flex justify-between">
-                                                {{ cProp.key }}
-                                                <button (click)="copyPath(child.path, cProp.key)" class="text-zinc-300 dark:text-zinc-700 hover:text-cyan-600 dark:hover:text-cyan-400 opacity-0 group-hover/row:opacity-100 transition-all">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                                </button>
-                                            </td>
-                                            <td class="px-4 py-1.5 font-mono text-zinc-700 dark:text-zinc-400 break-all">
-                                                <span [class]="getValueColor(cProp.type)">{{ formatValue(cProp.value) }}</span>
-                                            </td>
-                                        </tr>
-                                    }
-                                    </tbody>
-                               </table>
-                            </div>
-                          } @else {
-                            <div class="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-600 italic">
-                                No direct properties.
-                            </div>
-                          }
-
-                          <!-- Child Nested Hint -->
-                          @if (child.children.length > 0) {
-                              <div class="px-4 py-2 bg-zinc-100/50 dark:bg-zinc-950/30 border-t border-zinc-200 dark:border-zinc-800/50 text-xs text-zinc-500 flex items-center gap-2">
-                                  <svg class="w-3 h-3 text-zinc-400 dark:text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                                  Contains {{ child.children.length }} nested structure(s): 
-                                  <span class="text-zinc-600 dark:text-zinc-400 font-mono ml-1">
-                                      {{ getChildrenKeys(child) }}
-                                  </span>
-                              </div>
-                          }
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-
-              </div>
+        <div class="w-1/3 min-w-[300px] flex flex-col border-r border-zinc-200 dark:border-zinc-800 h-full bg-zinc-50 dark:bg-[#0c0c0e] transition-colors duration-300"
+             [class.hidden]="viewMode() === 'graph'">
+          <div class="flex-1 overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
+            @if (data()) {
+              <ng-container *ngTemplateOutlet="nodeTemplate; context: { $implicit: data() }"></ng-container>
             } @else {
-              <div class="flex-1 flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-600 transition-colors">
-                <svg class="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                <p>Select a node to inspect details</p>
-              </div>
+              <div class="flex items-center justify-center h-full text-zinc-500 text-sm">No data</div>
             }
           </div>
-        }
+        </div>
+        
+        <!-- RIGHT PANEL: INSPECTOR (Tree Mode) -->
+        <div class="flex-1 flex flex-col h-full bg-white dark:bg-[#09090b] relative overflow-hidden transition-colors duration-300"
+             [class.hidden]="viewMode() === 'graph'">
+             <ng-container *ngTemplateOutlet="inspectorTemplate"></ng-container>
+        </div>
 
         <!-- GRAPH VIEW IMPLEMENTATION -->
-        @if (viewMode() === 'graph') {
-           <div class="flex-1 bg-zinc-100 dark:bg-[#121214] relative overflow-hidden cursor-move transition-colors duration-300" 
-                (mousedown)="startPan($event)"
-                (mousemove)="pan($event)"
-                (mouseup)="endPan()"
-                (mouseleave)="endPan()"
-                (wheel)="handleWheel($event)">
+        <div class="absolute inset-0 z-0 bg-zinc-100 dark:bg-[#121214] overflow-hidden cursor-move transition-colors duration-300" 
+             [class.visibility-hidden]="viewMode() !== 'graph'"
+             (mousedown)="startPan($event)"
+             (mousemove)="pan($event)"
+             (mouseup)="endPan()"
+             (mouseleave)="endPan()"
+             (wheel)="handleWheel($event)">
              
              <!-- Zoom Controls & Download -->
-             <div class="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+             <div class="absolute bottom-4 right-4 z-10 flex flex-col gap-2 pointer-events-auto">
                <!-- Feature 2: Download SVG -->
                <button (click)="downloadSvg()" class="p-2 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-lg transition-colors" title="Download SVG">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -282,14 +117,207 @@ import mermaid from 'mermaid';
              <!-- Mermaid Container -->
              <div class="origin-top-left transition-transform duration-75"
                   [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + scale() + ')'">
-                <div #mermaidContainer class="flex items-center justify-center p-20 min-w-full min-h-full"></div>
+                <div #mermaidContainer class="flex items-center justify-center p-20 min-w-full min-h-full pointer-events-none [&_svg]:pointer-events-auto"></div>
              </div>
-           </div>
+        </div>
+
+        <!-- Graph Mode Inspector Drawer (Draggable & Minimizable) -->
+        @if (viewMode() === 'graph' && selectedNode()) {
+            <div class="absolute w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-xl z-20 flex flex-col overflow-hidden animate-in fade-in duration-200"
+                 [style.transform]="'translate(' + inspectorTransform().x + 'px, ' + inspectorTransform().y + 'px)'"
+                 [style.height]="isInspectorMinimized() ? 'auto' : 'auto'"
+                 style="top: 16px; right: 16px;">
+                 
+                <!-- Header (Draggable Handle) -->
+                <div (mousedown)="startDragInspector($event)" 
+                     class="flex items-center justify-between p-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 cursor-move select-none">
+                    <span class="text-xs font-bold uppercase text-zinc-500 flex items-center gap-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                        Node Inspector
+                    </span>
+                    <div class="flex items-center gap-1">
+                        <!-- Minimize Button -->
+                        <button (click)="toggleInspectorMinimize($event)" class="p-1 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                            @if (isInspectorMinimized()) {
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                            } @else {
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                            }
+                        </button>
+                        <!-- Close Button -->
+                        <button (click)="closeInspector($event)" class="p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div [class.hidden]="isInspectorMinimized()" class="flex-1 overflow-hidden relative" style="max-height: 80vh;">
+                    <ng-container *ngTemplateOutlet="inspectorTemplate"></ng-container>
+                </div>
+            </div>
         }
 
       </div>
 
     </div>
+
+    <!-- Inspector Template (Used in both views) -->
+    <ng-template #inspectorTemplate>
+        @if (selectedNode(); as node) {
+              <!-- Breadcrumbs -->
+              <div class="h-10 flex items-center px-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/30 overflow-x-auto whitespace-nowrap custom-scrollbar shrink-0 transition-colors duration-300">
+                <div class="flex items-center text-xs text-zinc-500">
+                  @for (step of node.path; track step; let last = $last) {
+                    <span class="hover:text-zinc-800 dark:hover:text-zinc-300 cursor-pointer transition-colors">{{ step }}</span>
+                    @if (!last) {
+                      <svg class="w-3 h-3 mx-1 text-zinc-400 dark:text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    }
+                  }
+                </div>
+              </div>
+
+              <!-- Inspector Content -->
+              <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                
+                <!-- Header Info -->
+                <div class="mb-6">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span [class]="getTypeColor(node.type) + ' px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 transition-colors'">
+                      {{ node.type }}
+                    </span>
+                    <h2 class="text-xl font-bold text-zinc-800 dark:text-zinc-100 tracking-tight transition-colors truncate">{{ node.key }}</h2>
+                  </div>
+                  <div class="text-zinc-500 text-sm font-mono flex items-center gap-4">
+                    <span>Items: {{ node.children.length + node.content.length }}</span>
+                    <span class="text-zinc-300 dark:text-zinc-700">|</span>
+                    <!-- Feature 3: Copy Path for Node -->
+                    <button 
+                        (click)="copyPath(node.path)" 
+                        class="flex items-center gap-1 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+                        title="Copy full path">
+                        <span>ID: {{ node.id }}</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Content Table (Primitives of Current Node) -->
+                @if (node.content.length > 0) {
+                  <div class="mb-6">
+                    <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                      Properties
+                    </h3>
+                    <div class="bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden transition-colors">
+                      <table class="w-full text-left text-sm">
+                        <thead class="bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 transition-colors">
+                          <tr>
+                            <th class="px-4 py-2 font-medium w-1/3 text-xs">Key</th>
+                            <th class="px-4 py-2 font-medium text-xs">Value</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800/50">
+                          @for (prop of node.content; track prop.key) {
+                            <tr class="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                              <td class="px-4 py-2 font-mono text-zinc-600 dark:text-zinc-400 text-xs flex items-center justify-between">
+                                  {{ prop.key }}
+                                  <!-- Copy Path for Property -->
+                                  <button 
+                                    (click)="copyPath(node.path, prop.key)" 
+                                    class="text-zinc-300 dark:text-zinc-700 hover:text-cyan-600 dark:hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all"
+                                    title="Copy Path">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                  </button>
+                              </td>
+                              <td class="px-4 py-2 font-mono text-zinc-800 dark:text-zinc-300 break-all select-text text-xs">
+                                <span [class]="getValueColor(prop.type)">{{ formatValue(prop.value) }}</span>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+                <!-- Children Inline Inspector -->
+                @if (node.children.length > 0) {
+                  <div>
+                    <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                      Nested Structures
+                    </h3>
+                    
+                    <div class="flex flex-col gap-3">
+                      @for (child of node.children; track child.id) {
+                        <!-- Child Card -->
+                        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-900/20 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors overflow-hidden">
+                          
+                          <!-- Child Header -->
+                          <div class="flex items-center justify-between px-3 py-2 bg-zinc-100 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded flex items-center justify-center border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
+                                    @if (child.type === 'array') {
+                                        <span class="text-pink-500 text-[9px] font-bold">[]</span>
+                                    } @else {
+                                        <span class="text-cyan-500 text-[9px] font-bold">{{ '{}' }}</span>
+                                    }
+                                </div>
+                                <span class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-200">{{ child.key }}</span>
+                            </div>
+                            <button 
+                                (click)="selectNode(child)"
+                                class="text-[10px] bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-300 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 transition-all flex items-center gap-1">
+                                Focus
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </button>
+                          </div>
+
+                          <!-- Child Content (Inline Primitives) -->
+                          @if (child.content.length > 0) {
+                            <div class="p-0">
+                               <table class="w-full text-left text-[10px]">
+                                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800/30">
+                                    @for (cProp of child.content; track cProp.key) {
+                                        <tr class="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 group/row transition-colors">
+                                            <td class="px-3 py-1 font-mono text-zinc-500 dark:text-zinc-500 w-1/3 border-r border-zinc-100 dark:border-zinc-800/30 flex justify-between">
+                                                {{ cProp.key }}
+                                                <button (click)="copyPath(child.path, cProp.key)" class="text-zinc-300 dark:text-zinc-700 hover:text-cyan-600 dark:hover:text-cyan-400 opacity-0 group-hover/row:opacity-100 transition-all">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                                </button>
+                                            </td>
+                                            <td class="px-3 py-1 font-mono text-zinc-700 dark:text-zinc-400 break-all">
+                                                <span [class]="getValueColor(cProp.type)">{{ formatValue(cProp.value) }}</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                    </tbody>
+                               </table>
+                            </div>
+                          } 
+
+                          <!-- Child Nested Hint -->
+                          @if (child.children.length > 0) {
+                              <div class="px-3 py-1.5 bg-zinc-100/50 dark:bg-zinc-950/30 border-t border-zinc-200 dark:border-zinc-800/50 text-[10px] text-zinc-500 flex items-center gap-2">
+                                  <svg class="w-3 h-3 text-zinc-400 dark:text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                  Contains {{ child.children.length }} nested structure(s)
+                              </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
+              </div>
+            } @else {
+              <div class="flex-1 flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-600 transition-colors">
+                <svg class="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                <p>Select a node to inspect details</p>
+              </div>
+            }
+    </ng-template>
 
     <!-- Recursive Tree Template (Only used in Tree View) -->
     <ng-template #nodeTemplate let-node>
@@ -367,6 +395,10 @@ import mermaid from 'mermaid';
     .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
       background: #3f3f46;
     }
+    .visibility-hidden {
+        visibility: hidden;
+        pointer-events: none;
+    }
 
     /* Highlight Search in Graph */
     :host ::ng-deep .mermaid .node.search-match rect,
@@ -376,6 +408,17 @@ import mermaid from 'mermaid';
         stroke-width: 4px !important;
         filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
         transition: all 0.3s ease;
+    }
+
+    /* Interactive Graph Nodes */
+    :host ::ng-deep .mermaid .node {
+        cursor: pointer !important;
+    }
+    :host ::ng-deep .mermaid .node:hover rect,
+    :host ::ng-deep .mermaid .node:hover circle,
+    :host ::ng-deep .mermaid .node:hover polygon {
+        filter: brightness(0.9);
+        transition: filter 0.2s;
     }
 
     /* Dark Mode Mermaid Styles */
@@ -421,6 +464,8 @@ import mermaid from 'mermaid';
 })
 export class GraphVisualizerComponent {
   data = input<GraphNode | null>(null);
+  nodeSelected = output<GraphNode>(); // Output for external sync
+
   mermaidContainer = viewChild<ElementRef>('mermaidContainer');
   themeService = inject(ThemeService);
   
@@ -436,6 +481,13 @@ export class GraphVisualizerComponent {
   isDragging = false;
   startX = 0;
   startY = 0;
+
+  // Inspector Moveable State
+  inspectorTransform = signal({ x: 0, y: 0 });
+  isInspectorMinimized = signal(false);
+  private isDraggingInspector = false;
+  private inspectorDragStart = { x: 0, y: 0 };
+  private inspectorStartTransform = { x: 0, y: 0 };
 
   constructor() {
     effect(() => {
@@ -461,7 +513,7 @@ export class GraphVisualizerComponent {
          mermaid.initialize({ 
             startOnLoad: false, 
             theme: mermaidTheme, 
-            securityLevel: 'loose',
+            securityLevel: 'loose', // Allows clicks? No, mostly script tags.
             flowchart: {
                 curve: 'basis',
                 htmlLabels: true
@@ -475,8 +527,13 @@ export class GraphVisualizerComponent {
          });
 
          try {
-             const { svg } = await mermaid.render('mermaid-svg-' + Date.now(), graphDefinition);
+             const { svg, bindFunctions } = await mermaid.render('mermaid-svg-' + Date.now(), graphDefinition);
              container.nativeElement.innerHTML = svg;
+             if (bindFunctions) bindFunctions(container.nativeElement);
+             
+             // FEATURE 1: Add click listeners manually to nodes
+             this.attachClickListeners(container.nativeElement);
+             
          } catch (e) {
              console.error('Mermaid render error', e);
              container.nativeElement.innerHTML = '<div class="text-red-500">Error rendering graph. Structure might be too complex.</div>';
@@ -485,8 +542,107 @@ export class GraphVisualizerComponent {
     });
   }
 
+  // --- INSPECTOR DRAG LOGIC ---
+  startDragInspector(e: MouseEvent) {
+      e.preventDefault();
+      // Only drag if not clicking buttons
+      if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) {
+          return;
+      }
+      
+      this.isDraggingInspector = true;
+      this.inspectorDragStart = { x: e.clientX, y: e.clientY };
+      this.inspectorStartTransform = { ...this.inspectorTransform() };
+      
+      // Bind global events
+      document.addEventListener('mousemove', this.onDragInspector);
+      document.addEventListener('mouseup', this.stopDragInspector);
+  }
+
+  onDragInspector = (e: MouseEvent) => {
+      if (!this.isDraggingInspector) return;
+      const dx = e.clientX - this.inspectorDragStart.x;
+      const dy = e.clientY - this.inspectorDragStart.y;
+      
+      this.inspectorTransform.set({
+          x: this.inspectorStartTransform.x + dx,
+          y: this.inspectorStartTransform.y + dy
+      });
+  }
+
+  stopDragInspector = () => {
+      this.isDraggingInspector = false;
+      document.removeEventListener('mousemove', this.onDragInspector);
+      document.removeEventListener('mouseup', this.stopDragInspector);
+  }
+
+  toggleInspectorMinimize(event: MouseEvent) {
+    event.stopPropagation();
+    this.isInspectorMinimized.update(v => !v);
+  }
+
+  closeInspector(event: MouseEvent) {
+    event.stopPropagation();
+    this.selectedNode.set(null);
+  }
+
+  // --- FEATURE 1: Interactive Graph Logic ---
+  attachClickListeners(svgElement: HTMLElement) {
+      const nodes = svgElement.querySelectorAll('.node');
+      nodes.forEach((node) => {
+          node.addEventListener('click', (e) => {
+              // Extract ID from the DOM element ID (flowchart-node_X-...)
+              // The id attribute usually looks like "flowchart-node_123-..."
+              const domId = node.id; 
+              // We need the part between "flowchart-" and the next dash maybe?
+              // Actually, in generateMermaidGraph, we used node.id (which is "node-X") replaced by underscores ("node_X")
+              
+              // Let's try to match the ID from our data.
+              // Helper: map dom ID back to our node ID
+              // Our node ID: node-1
+              // Mermaid node ID: node_1
+              
+              // Find the 'key' part inside the mermaid ID
+              // The mermaid ID format is roughly "flowchart-{nodeId}-{somehash}"
+              
+              // Better strategy: Store a lookup map or traverse to find matching ID.
+              // Since we don't have a map, let's reverse the ID transformation.
+              // Mermaid renders id="{id}" for the group. 
+              
+              // Let's parse the ID from the node element's ID.
+              // Example: flowchart-node_0-23423423
+              const parts = domId.split('-');
+              if (parts.length >= 2) {
+                  // parts[1] is likely "node_0"
+                  const nodeId = parts[1].replace(/_/g, '-');
+                  
+                  // Find this node in our data
+                  const findNode = (root: GraphNode): GraphNode | null => {
+                      if (root.id === nodeId) return root;
+                      for (const child of root.children) {
+                          const found = findNode(child);
+                          if (found) return found;
+                      }
+                      return null;
+                  };
+
+                  const d = this.data();
+                  if (d) {
+                      const target = findNode(d);
+                      if (target) {
+                          this.selectNode(target);
+                          // Stop propagation
+                          e.stopPropagation();
+                      }
+                  }
+              }
+          });
+      });
+  }
+
   setViewMode(mode: 'tree' | 'graph') {
     this.viewMode.set(mode);
+    // Reset zoom when switching to graph? Maybe not.
   }
 
   // --- FEATURE 4: GRAPH SEARCH ---
@@ -513,36 +669,25 @@ export class GraphVisualizerComponent {
 
       if (targetNode) {
           // 2. Find SVG element
-          // Mermaid ID logic: replace hyphens with underscores
           const mermaidId = targetNode.id.replace(/-/g, '_');
-          
-          // Selector for the group that mermaid creates
           const element = container.querySelector(`[id^="flowchart-${mermaidId}-"]`);
           
           if (element && element instanceof SVGGraphicsElement) {
               // 3. Highlight
-              // Remove previous highlights
               container.querySelectorAll('.search-match').forEach((el: Element) => el.classList.remove('search-match'));
               element.classList.add('search-match');
 
               // 4. Center View (Pan & Zoom)
               const bbox = element.getBBox();
-              const containerRect = container.parentElement?.getBoundingClientRect(); // The wrapper div
+              const containerRect = container.parentElement?.getBoundingClientRect(); 
               
               if (containerRect) {
-                 // Current logic implies panX/panY transform the container.
-                 // We want: Center of Container = Center of Node
-                 // Node Center relative to SVG Origin: bbox.x + bbox.width/2, bbox.y + bbox.height/2
-                 
                  const nodeCenterX = bbox.x + bbox.width / 2;
                  const nodeCenterY = bbox.y + bbox.height / 2;
                  
-                 const targetScale = 1.5; // Zoom in a bit to show we found it
+                 const targetScale = 1.5; 
                  this.scale.set(targetScale);
                  
-                 // Calculate Pan
-                 // Container Center = (WrapperWidth / 2)
-                 // Pan = ContainerCenter - (NodeCenter * Scale)
                  const wrapperW = containerRect.width;
                  const wrapperH = containerRect.height;
                  
@@ -552,6 +697,9 @@ export class GraphVisualizerComponent {
                  this.panX.set(newPanX);
                  this.panY.set(newPanY);
               }
+              
+              // Also select it
+              this.selectNode(targetNode);
           }
       }
   }
@@ -561,7 +709,6 @@ export class GraphVisualizerComponent {
       const fullPath = specificKey ? [...path, specificKey] : path;
       const dotNotation = JsonTransformService.getDotNotation(fullPath);
       navigator.clipboard.writeText(dotNotation).then(() => {
-          // Ideally show a toast, for now just log
           console.log('Copied:', dotNotation);
       });
   }
@@ -684,14 +831,19 @@ export class GraphVisualizerComponent {
   }
 
   resetZoom() {
-      this.panX.set(0);
-      this.panY.set(0);
-      this.scale.set(1);
+      // Use setTimeout to avoid NG0100: ExpressionChangedAfterItHasBeenCheckedError
+      // because this updates signals that affect style bindings potentially during a change detection cycle
+      setTimeout(() => {
+          this.panX.set(0);
+          this.panY.set(0);
+          this.scale.set(1);
+      });
   }
 
   // --- TREE VIEW LOGIC ---
   selectNode(node: GraphNode) {
     this.selectedNode.set(node);
+    this.nodeSelected.emit(node);
     if (node.children.length > 0) {
         node.isExpanded = true;
     }

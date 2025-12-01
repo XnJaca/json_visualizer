@@ -1,16 +1,51 @@
 
-<div class="flex flex-col h-screen w-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300">
+<div class="flex flex-col h-screen w-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300"
+     (mousemove)="onSplitterDrag($event)"
+     (mouseup)="stopSplitterDrag()"
+     (mouseleave)="stopSplitterDrag()">
   
   <!-- Header -->
-  <header class="flex-none h-12 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 bg-white dark:bg-zinc-950 justify-between transition-colors duration-300">
+  <header class="flex-none h-12 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 bg-white dark:bg-zinc-950 justify-between transition-colors duration-300 z-30">
     <div class="flex items-center gap-2">
       <div class="w-6 h-6 rounded bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-purple-500/20">
         J
       </div>
-      <h1 class="text-zinc-700 dark:text-zinc-300 font-bold text-sm tracking-tight">JSON<span class="text-zinc-400 dark:text-zinc-500 font-normal ml-1">Explorer</span></h1>
+      <h1 class="text-zinc-700 dark:text-zinc-300 font-bold text-sm tracking-tight hidden sm:block">JSON<span class="text-zinc-400 dark:text-zinc-500 font-normal ml-1">Explorer</span></h1>
+      
+      <!-- Feature 5: Advanced Filtering (JMESPath) -->
+      <div class="ml-6 flex items-center group relative w-64 md:w-96">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <span class="text-zinc-400 text-xs font-bold">QUERY:</span>
+        </div>
+        <input 
+          type="text" 
+          [value]="filterQuery()"
+          (input)="updateFilter($event)"
+          placeholder="data.planningItems[].id" 
+          class="block w-full pl-16 pr-3 py-1 text-sm bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md focus:ring-1 focus:ring-purple-500 focus:border-purple-500 text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 transition-colors"
+        >
+        @if (filterError()) {
+            <div class="absolute top-full left-0 mt-1 text-[10px] text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-900">
+                Invalid Query
+            </div>
+        }
+      </div>
     </div>
     
     <div class="flex gap-3 items-center">
+        <!-- Feature 4: Focus Mode Toggle -->
+      <button (click)="toggleFocusMode()" 
+              [class.bg-purple-100]="isFocusMode()"
+              [class.text-purple-700]="isFocusMode()"
+              [class.dark:bg-purple-900/30]="isFocusMode()"
+              [class.dark:text-purple-300]="isFocusMode()"
+              class="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors flex items-center gap-1" title="Toggle Focus Mode">
+         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+         @if (isFocusMode()) { <span class="text-xs font-medium hidden sm:block">Focus On</span> }
+      </button>
+
+      <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1"></div>
+
       <!-- Theme Toggle -->
       <button (click)="themeService.toggle()" class="p-1.5 rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
         @if (themeService.mode() === 'dark') {
@@ -23,26 +58,49 @@
       <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1"></div>
 
       <button (click)="loadSample()" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
-        Load Sample
+        Sample
       </button>
     </div>
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 flex overflow-hidden">
+  <main class="flex-1 flex overflow-hidden relative">
+    
     <!-- Left Pane: Editor -->
-    <div class="w-1/4 min-w-[250px] max-w-[400px] h-full z-10">
-      <app-json-editor 
-        [jsonString]="jsonString()" 
-        (jsonChange)="updateJson($event)"
-        [error]="error()">
-      </app-json-editor>
+    <!-- Feature 2: Resizable Panel (Dynamic Width) & Feature 4: Focus Mode (Hidden) -->
+    <div 
+        class="h-full z-10 transition-all duration-300 ease-in-out"
+        [style.width.px]="isFocusMode() ? 0 : editorWidth()"
+        [style.min-width.px]="isFocusMode() ? 0 : 250"
+        [class.overflow-hidden]="isFocusMode()"
+        [class.w-0]="isFocusMode()"
+        [class.border-r]="!isFocusMode()"
+        class="border-zinc-200 dark:border-zinc-800">
+      
+      <div class="w-full h-full" [style.width.px]="editorWidth()"> 
+          <app-json-editor 
+            [jsonString]="jsonString()" 
+            (jsonChange)="updateJson($event)"
+            [error]="error()">
+          </app-json-editor>
+      </div>
     </div>
 
+    <!-- Resizer Handle -->
+    @if (!isFocusMode()) {
+        <div 
+            class="w-1 h-full cursor-col-resize hover:bg-purple-500 active:bg-purple-600 z-20 flex items-center justify-center group transition-colors -ml-0.5"
+            (mousedown)="startSplitterDrag($event)">
+            <div class="h-8 w-1 bg-zinc-300 dark:bg-zinc-700 rounded-full group-hover:bg-purple-300"></div>
+        </div>
+    }
+
     <!-- Right Pane: Visualizer -->
-    <div class="flex-1 h-full relative bg-zinc-50 dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800">
+    <div class="flex-1 h-full relative bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
+      <!-- Feature 1: Interactive Graph - Passed 'nodeSelected' output -->
       <app-graph-visualizer 
-        [data]="graphData()">
+        [data]="graphData()"
+        (nodeSelected)="onGraphNodeSelected($event)">
       </app-graph-visualizer>
     </div>
   </main>

@@ -4,8 +4,9 @@ import { JsonEditorComponent } from './components/json-editor/json-editor.compon
 import { GraphVisualizerComponent } from './components/graph-visualizer/graph-visualizer.component';
 import { JsonTransformService, GraphNode } from './services/json-transform.service';
 import { ThemeService } from './services/theme.service';
+// @ts-ignore
+import jmespath from 'jmespath';
 
-// Use a Template Literal for safety with newlines and escaped characters
 const DEFAULT_JSON_STR = `
 {
     "state": true,
@@ -250,28 +251,62 @@ export class AppComponent {
   jsonString = signal<string>('');
   themeService = inject(ThemeService);
   
-  // Computed state derived from jsonString
+  // Feature 5: Filtering
+  filterQuery = signal<string>('');
+  
+  // Feature 2: Resizing
+  editorWidth = signal<number>(400); // Initial width
+  isDraggingSplitter = false;
+  
+  // Feature 4: Focus Mode
+  isFocusMode = signal<boolean>(false);
+
+  // Computed state derived from jsonString and filter
   parseResult = computed(() => {
     try {
       const str = this.jsonString();
-      if (!str.trim()) return { data: null, error: null };
+      if (!str.trim()) return { data: null, error: null, isFilterError: false };
+      
       const parsed = JSON.parse(str);
-      return { data: parsed, error: null };
+      const query = this.filterQuery();
+      
+      // Apply Filter if present
+      let filteredData = parsed;
+      let isFilterError = false;
+
+      if (query.trim()) {
+         try {
+             const result = jmespath.search(parsed, query);
+             filteredData = result;
+         } catch (e) {
+             isFilterError = true;
+             // Keep original data visible on filter error to avoid empty screen
+             filteredData = parsed;
+         }
+      }
+
+      return { data: filteredData, error: null, isFilterError };
     } catch (e: any) {
-      return { data: null, error: e.message };
+      return { data: null, error: e.message, isFilterError: false };
     }
   });
+
+  // Derived computed signals
+  filterError = computed(() => this.parseResult().isFilterError);
+  error = computed(() => this.parseResult().error);
 
   // Computed graph data
   graphData = computed(() => {
     const res = this.parseResult();
     if (res.data) {
+      // If JMESPath returns null/undefined (no match), handle gracefully
+      if (res.data === null || res.data === undefined) {
+         return this.transformService.transform({});
+      }
       return this.transformService.transform(res.data);
     }
     return null;
   });
-
-  error = computed(() => this.parseResult().error);
 
   constructor(private transformService: JsonTransformService) {
     // Feature 5: LocalStorage Persistence
@@ -319,5 +354,41 @@ export class AppComponent {
       a.download = 'data.json';
       a.click();
       URL.revokeObjectURL(url);
+  }
+
+  // --- Feature 5: Filtering Logic ---
+  updateFilter(e: Event) {
+      const val = (e.target as HTMLInputElement).value;
+      this.filterQuery.set(val);
+  }
+
+  // --- Feature 2: Resizing Logic ---
+  startSplitterDrag(e: MouseEvent) {
+      e.preventDefault();
+      this.isDraggingSplitter = true;
+  }
+
+  onSplitterDrag(e: MouseEvent) {
+      if (this.isDraggingSplitter) {
+          const newWidth = Math.max(250, Math.min(e.clientX, window.innerWidth - 300));
+          this.editorWidth.set(newWidth);
+      }
+  }
+
+  stopSplitterDrag() {
+      this.isDraggingSplitter = false;
+  }
+
+  // --- Feature 4: Focus Mode ---
+  toggleFocusMode() {
+      this.isFocusMode.update(v => !v);
+  }
+
+  // --- Feature 1: Graph Interaction ---
+  // When a node is selected in the visualizer (e.g. from graph click), we could sync it here
+  // or just let visualizer handle it internally. The visualizer handles selection state internally,
+  // but if we wanted to highlight line numbers in editor later, we would need this.
+  onGraphNodeSelected(node: GraphNode) {
+      // Future: scroll editor to line?
   }
 }

@@ -15,6 +15,7 @@
     "@angular/compiler": "^21.0.0",
     "d3": "^7.9.0",
     "mermaid": "11",
+    "jmespath": "0.16.0",
     "@angular/common": "^21.0.0",
     "@angular/build": "^21.0.0",
     "@angular/cli": "^21.0.0",
