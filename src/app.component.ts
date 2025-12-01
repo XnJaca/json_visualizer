@@ -1,5 +1,5 @@
 
-import { Component, computed, signal, inject } from '@angular/core';
+import { Component, computed, signal, inject, effect } from '@angular/core';
 import { JsonEditorComponent } from './components/json-editor/json-editor.component';
 import { GraphVisualizerComponent } from './components/graph-visualizer/graph-visualizer.component';
 import { JsonTransformService, GraphNode } from './services/json-transform.service';
@@ -238,6 +238,8 @@ const DEFAULT_JSON_STR = `
 }
 `;
 
+const LOCAL_STORAGE_KEY = 'json_explorer_content';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -272,7 +274,26 @@ export class AppComponent {
   error = computed(() => this.parseResult().error);
 
   constructor(private transformService: JsonTransformService) {
-      this.loadSample();
+    // Feature 5: LocalStorage Persistence
+    effect(() => {
+        const currentJson = this.jsonString();
+        // Save to local storage whenever it changes (debouncing could be good but keeping simple)
+        if (currentJson) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, currentJson);
+        }
+    });
+
+    this.initData();
+  }
+
+  initData() {
+      // Try load from local storage
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+          this.jsonString.set(saved);
+      } else {
+          this.loadSample();
+      }
   }
 
   updateJson(newJson: string) {
@@ -287,5 +308,16 @@ export class AppComponent {
         console.error('Failed to parse default JSON', e);
         this.jsonString.set('{}');
     }
+  }
+
+  // Feature 2: Download JSON
+  downloadJson() {
+      const blob = new Blob([this.jsonString()], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'data.json';
+      a.click();
+      URL.revokeObjectURL(url);
   }
 }

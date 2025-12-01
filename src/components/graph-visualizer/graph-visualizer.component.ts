@@ -1,7 +1,7 @@
 
 import { Component, input, signal, computed, effect, ElementRef, viewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GraphNode } from '../../services/json-transform.service';
+import { GraphNode, JsonTransformService } from '../../services/json-transform.service';
 import { ThemeService } from '../../services/theme.service';
 import mermaid from 'mermaid';
 
@@ -15,19 +15,18 @@ import mermaid from 'mermaid';
       <!-- TOOLBAR & VIEW SWITCHER -->
       <div class="h-12 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-between px-4 shrink-0 z-20 transition-colors duration-300">
         
-        <!-- Search (Only for Tree View) -->
+        <!-- Search (Both Views) - Feature 4 -->
         <div class="flex items-center gap-4 w-1/3">
-          @if (viewMode() === 'tree') {
-            <div class="relative w-full max-w-xs group">
-              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 group-focus-within:text-cyan-600 dark:group-focus-within:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-              <input 
-                type="text" 
-                placeholder="Filter nodes..." 
-                (input)="updateSearch($event)"
-                class="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md py-1 pl-8 pr-3 text-xs text-zinc-800 dark:text-zinc-300 placeholder-zinc-500 dark:placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
-              />
-            </div>
-          }
+          <div class="relative w-full max-w-xs group">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 group-focus-within:text-cyan-600 dark:group-focus-within:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input 
+              type="text" 
+              [placeholder]="viewMode() === 'tree' ? 'Filter nodes...' : 'Search in graph...'" 
+              (input)="updateSearch($event)"
+              (keydown.enter)="performGraphSearch()"
+              class="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md py-1 pl-8 pr-3 text-xs text-zinc-800 dark:text-zinc-300 placeholder-zinc-500 dark:placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+            />
+          </div>
         </div>
 
         <!-- View Switcher -->
@@ -105,7 +104,14 @@ import mermaid from 'mermaid';
                   <div class="text-zinc-500 text-sm font-mono flex items-center gap-4">
                     <span>Items: {{ node.children.length + node.content.length }}</span>
                     <span class="text-zinc-300 dark:text-zinc-700">|</span>
-                    <span>ID: {{ node.id }}</span>
+                    <!-- Feature 3: Copy Path for Node -->
+                    <button 
+                        (click)="copyPath(node.path)" 
+                        class="flex items-center gap-1 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+                        title="Copy full path">
+                        <span>ID: {{ node.id }}</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    </button>
                   </div>
                 </div>
 
@@ -128,7 +134,16 @@ import mermaid from 'mermaid';
                         <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800/50">
                           @for (prop of node.content; track prop.key) {
                             <tr class="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                              <td class="px-4 py-2.5 font-mono text-zinc-600 dark:text-zinc-400">{{ prop.key }}</td>
+                              <td class="px-4 py-2.5 font-mono text-zinc-600 dark:text-zinc-400 flex items-center justify-between">
+                                  {{ prop.key }}
+                                  <!-- Feature 3: Copy Path for Property -->
+                                  <button 
+                                    (click)="copyPath(node.path, prop.key)" 
+                                    class="text-zinc-300 dark:text-zinc-700 hover:text-cyan-600 dark:hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all"
+                                    title="Copy Path">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                  </button>
+                              </td>
                               <td class="px-4 py-2.5 font-mono text-zinc-800 dark:text-zinc-300 break-all select-text">
                                 <span [class]="getValueColor(prop.type)">{{ formatValue(prop.value) }}</span>
                               </td>
@@ -184,7 +199,12 @@ import mermaid from 'mermaid';
                                     <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800/30">
                                     @for (cProp of child.content; track cProp.key) {
                                         <tr class="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 group/row transition-colors">
-                                            <td class="px-4 py-1.5 font-mono text-zinc-500 dark:text-zinc-500 w-1/3 border-r border-zinc-100 dark:border-zinc-800/30">{{ cProp.key }}</td>
+                                            <td class="px-4 py-1.5 font-mono text-zinc-500 dark:text-zinc-500 w-1/3 border-r border-zinc-100 dark:border-zinc-800/30 flex justify-between">
+                                                {{ cProp.key }}
+                                                <button (click)="copyPath(child.path, cProp.key)" class="text-zinc-300 dark:text-zinc-700 hover:text-cyan-600 dark:hover:text-cyan-400 opacity-0 group-hover/row:opacity-100 transition-all">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                                </button>
+                                            </td>
                                             <td class="px-4 py-1.5 font-mono text-zinc-700 dark:text-zinc-400 break-all">
                                                 <span [class]="getValueColor(cProp.type)">{{ formatValue(cProp.value) }}</span>
                                             </td>
@@ -234,8 +254,15 @@ import mermaid from 'mermaid';
                 (mouseleave)="endPan()"
                 (wheel)="handleWheel($event)">
              
-             <!-- Zoom Controls -->
+             <!-- Zoom Controls & Download -->
              <div class="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+               <!-- Feature 2: Download SVG -->
+               <button (click)="downloadSvg()" class="p-2 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-lg transition-colors" title="Download SVG">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+               </button>
+
+               <div class="w-full h-px bg-zinc-300 dark:bg-zinc-700 my-1"></div>
+
                <!-- Zoom In -->
                <button (click)="adjustZoom(0.2)" class="p-2 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-lg transition-colors" title="Zoom In">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -341,13 +368,23 @@ import mermaid from 'mermaid';
       background: #3f3f46;
     }
 
-    /* Dark Mode Mermaid Styles (Inject via :host ::ng-deep) */
+    /* Highlight Search in Graph */
+    :host ::ng-deep .mermaid .node.search-match rect,
+    :host ::ng-deep .mermaid .node.search-match circle,
+    :host ::ng-deep .mermaid .node.search-match polygon {
+        stroke: #f59e0b !important; /* Amber-500 */
+        stroke-width: 4px !important;
+        filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
+        transition: all 0.3s ease;
+    }
+
+    /* Dark Mode Mermaid Styles */
     :host-context(.dark) ::ng-deep .mermaid .node rect, 
     :host-context(.dark) ::ng-deep .mermaid .node circle, 
     :host-context(.dark) ::ng-deep .mermaid .node ellipse, 
     :host-context(.dark) ::ng-deep .mermaid .node polygon, 
     :host-context(.dark) ::ng-deep .mermaid .node path {
-       fill: #18181b !important; /* Zinc 900 - Dark card background */
+       fill: #18181b !important;
        stroke-width: 2px;
     }
     :host-context(.dark) ::ng-deep .mermaid .edgePath .path {
@@ -355,7 +392,7 @@ import mermaid from 'mermaid';
        stroke-width: 2px;
     }
     :host-context(.dark) ::ng-deep .mermaid .edgeLabel {
-       background-color: #18181b !important; /* Match card bg for clean text */
+       background-color: #18181b !important;
        color: #a1a1aa !important;
     }
     :host-context(.dark) ::ng-deep .mermaid .cluster rect {
@@ -363,13 +400,13 @@ import mermaid from 'mermaid';
         stroke: #27272a !important;
     }
 
-    /* Light Mode Mermaid Styles (Default) */
+    /* Light Mode Mermaid Styles */
     :host ::ng-deep .mermaid .node rect, 
     :host ::ng-deep .mermaid .node circle, 
     :host ::ng-deep .mermaid .node ellipse, 
     :host ::ng-deep .mermaid .node polygon, 
     :host ::ng-deep .mermaid .node path {
-       fill: #ffffff !important; /* Pure white for cleaner look */
+       fill: #ffffff !important;
        stroke-width: 2px;
     }
     :host ::ng-deep .mermaid .edgePath .path {
@@ -391,7 +428,7 @@ export class GraphVisualizerComponent {
   searchTerm = signal<string>('');
   viewMode = signal<'tree' | 'graph'>('tree');
   
-  // Pan Zoom State (Signals to avoid NG0100 and support Zoneless)
+  // Pan Zoom State (Signals)
   panX = signal(0);
   panY = signal(0);
   scale = signal(1);
@@ -408,23 +445,17 @@ export class GraphVisualizerComponent {
         }
     });
 
-    // Render mermaid when view mode changes, data updates, or THEME changes
+    // Render mermaid
     effect(async () => {
        const mode = this.viewMode();
        const d = this.data();
        const container = this.mermaidContainer();
-       const currentTheme = this.themeService.mode(); // dependency on theme
+       const currentTheme = this.themeService.mode();
 
        if (mode === 'graph' && d && container) {
-         // Fix NG0100: Schedule reset for next tick to avoid expression changed error
-         // Only reset zoom if data actually changed significantly or first load, 
-         // but here we just do it to be safe.
-         // Note: resetting zoom on theme switch might be annoying, but acceptable for MVP.
-         
          // Generate Diagram
          const graphDefinition = this.generateMermaidGraph(d);
          
-         // Init mermaid config based on theme
          const mermaidTheme = currentTheme === 'dark' ? 'dark' : 'base';
          
          mermaid.initialize({ 
@@ -444,7 +475,6 @@ export class GraphVisualizerComponent {
          });
 
          try {
-             // We need unique IDs for every render to prevent mermaid caching artifacts
              const { svg } = await mermaid.render('mermaid-svg-' + Date.now(), graphDefinition);
              container.nativeElement.innerHTML = svg;
          } catch (e) {
@@ -459,6 +489,105 @@ export class GraphVisualizerComponent {
     this.viewMode.set(mode);
   }
 
+  // --- FEATURE 4: GRAPH SEARCH ---
+  performGraphSearch() {
+      const term = this.searchTerm().toLowerCase();
+      if (!term || this.viewMode() !== 'graph') return;
+      
+      const container = this.mermaidContainer()?.nativeElement;
+      if (!container) return;
+
+      // 1. Find node in data that matches
+      const findNode = (node: GraphNode): GraphNode | null => {
+          if (node.key.toLowerCase().includes(term)) return node;
+          for (const child of node.children) {
+              const found = findNode(child);
+              if (found) return found;
+          }
+          return null;
+      };
+
+      const d = this.data();
+      if (!d) return;
+      const targetNode = findNode(d);
+
+      if (targetNode) {
+          // 2. Find SVG element
+          // Mermaid ID logic: replace hyphens with underscores
+          const mermaidId = targetNode.id.replace(/-/g, '_');
+          
+          // Selector for the group that mermaid creates
+          const element = container.querySelector(`[id^="flowchart-${mermaidId}-"]`);
+          
+          if (element && element instanceof SVGGraphicsElement) {
+              // 3. Highlight
+              // Remove previous highlights
+              container.querySelectorAll('.search-match').forEach((el: Element) => el.classList.remove('search-match'));
+              element.classList.add('search-match');
+
+              // 4. Center View (Pan & Zoom)
+              const bbox = element.getBBox();
+              const containerRect = container.parentElement?.getBoundingClientRect(); // The wrapper div
+              
+              if (containerRect) {
+                 // Current logic implies panX/panY transform the container.
+                 // We want: Center of Container = Center of Node
+                 // Node Center relative to SVG Origin: bbox.x + bbox.width/2, bbox.y + bbox.height/2
+                 
+                 const nodeCenterX = bbox.x + bbox.width / 2;
+                 const nodeCenterY = bbox.y + bbox.height / 2;
+                 
+                 const targetScale = 1.5; // Zoom in a bit to show we found it
+                 this.scale.set(targetScale);
+                 
+                 // Calculate Pan
+                 // Container Center = (WrapperWidth / 2)
+                 // Pan = ContainerCenter - (NodeCenter * Scale)
+                 const wrapperW = containerRect.width;
+                 const wrapperH = containerRect.height;
+                 
+                 const newPanX = (wrapperW / 2) - (nodeCenterX * targetScale);
+                 const newPanY = (wrapperH / 2) - (nodeCenterY * targetScale);
+                 
+                 this.panX.set(newPanX);
+                 this.panY.set(newPanY);
+              }
+          }
+      }
+  }
+
+  // --- FEATURE 3: COPY PATH ---
+  copyPath(path: string[], specificKey?: string) {
+      const fullPath = specificKey ? [...path, specificKey] : path;
+      const dotNotation = JsonTransformService.getDotNotation(fullPath);
+      navigator.clipboard.writeText(dotNotation).then(() => {
+          // Ideally show a toast, for now just log
+          console.log('Copied:', dotNotation);
+      });
+  }
+
+  // --- FEATURE 2: DOWNLOAD SVG ---
+  downloadSvg() {
+      const container = this.mermaidContainer()?.nativeElement;
+      if (!container) return;
+      
+      const svgElement = container.querySelector('svg');
+      if (!svgElement) return;
+
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svgElement);
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'graph_diagram.svg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+  }
+
   // --- MERMAID GENERATION ---
   generateMermaidGraph(root: GraphNode): string {
     let edges: string[] = [];
@@ -467,88 +596,60 @@ export class GraphVisualizerComponent {
     // Theme-aware colors
     const isDark = this.themeService.mode() === 'dark';
     
-    // Colors for Light Mode vs Dark Mode
-    // Updated Logic: Use Outline style for Dark Mode instead of solid blocks
-    
-    // ARRAYS
-    // Dark: Dark background with Pink border
-    // Light: White background with Pink border
     const arrayFill = isDark ? '#18181b' : '#ffffff'; 
-    const arrayStroke = isDark ? '#f472b6' : '#db2777'; // Pink 400 (Dark) / Pink 600 (Light)
-    const arrayColor = isDark ? '#e4e4e7' : '#831843'; // Light Text (Dark) / Dark Pink Text (Light)
+    const arrayStroke = isDark ? '#f472b6' : '#db2777'; 
+    const arrayColor = isDark ? '#e4e4e7' : '#831843';
     
-    // OBJECTS
-    // Dark: Dark background with Cyan border
-    // Light: White background with Cyan border
     const objFill = isDark ? '#18181b' : '#ffffff'; 
-    const objStroke = isDark ? '#22d3ee' : '#0891b2'; // Cyan 400 (Dark) / Cyan 600 (Light)
-    const objColor = isDark ? '#e4e4e7' : '#155e75'; // Light Text (Dark) / Dark Cyan Text (Light)
+    const objStroke = isDark ? '#22d3ee' : '#0891b2'; 
+    const objColor = isDark ? '#e4e4e7' : '#155e75';
 
-    // ROOT
     const rootFill = isDark ? '#18181b' : '#ffffff';
     const rootStroke = isDark ? '#a1a1aa' : '#52525b';
     const rootColor = isDark ? '#e4e4e7' : '#18181b';
 
-    // Class Definitions
     const defs = `
     classDef array fill:${arrayFill},stroke:${arrayStroke},stroke-width:2px,color:${arrayColor};
     classDef object fill:${objFill},stroke:${objStroke},stroke-width:2px,color:${objColor};
     classDef root fill:${rootFill},stroke:${rootStroke},stroke-width:2px,color:${rootColor};
     `;
     
-    // Recursive Traversal
     const traverse = (node: GraphNode) => {
-        // Only graph Structural Nodes (Object/Array), skip primitives
         if (node.type === 'primitive') return;
 
-        const nodeId = node.id.replace(/-/g, '_'); // Mermaid doesn't like hyphens in IDs sometimes
+        const nodeId = node.id.replace(/-/g, '_'); 
         
-        // Determine styling class
         if (node.type === 'array') styles.push(`class ${nodeId} array;`);
         else if (node.type === 'object') styles.push(`class ${nodeId} object;`);
         else if (node.path.length === 1) styles.push(`class ${nodeId} root;`);
 
-        // Process Children
         node.children.forEach(child => {
-            // Filter: Only link to structural children (Objects/Arrays)
             if (child.type === 'primitive') return;
 
             const childId = child.id.replace(/-/g, '_');
-            
-            // Sanitize Strings for Mermaid
-            // 1. Edge Label (Key): Escape double quotes
             const safeEdgeLabel = child.key.replace(/"/g, '#quot;'); 
-
-            // 2. Node Label: Use Key (Name), not type.
             const safeNodeLabel = `"${child.key.replace(/"/g, '#quot;')}"`;
 
-            // Edge: Parent --> Child
             edges.push(`${nodeId} -- "${safeEdgeLabel}" --> ${childId}[${safeNodeLabel}]`);
             traverse(child);
         });
     };
 
-    // Start
     const rootId = root.id.replace(/-/g, '_');
     traverse(root);
 
-    // Change direction to TD (Vertical)
     let graph = `graph TD\n${defs}\n`;
     
-    // If we have edges, show them.
     if (edges.length > 0) {
         graph += edges.join('\n') + '\n';
     } else {
-        // Fallback: If root has no structural children, at least show root
         if (root.type !== 'primitive') {
              const safeRootLabel = `"${root.key.replace(/"/g, '#quot;')}"`;
              graph += `${rootId}[${safeRootLabel}]\n`;
         }
     }
     
-    // Add styles (deduplicated)
     graph += [...new Set(styles)].join('\n');
-    
     return graph;
   }
 
@@ -572,8 +673,6 @@ export class GraphVisualizerComponent {
 
   handleWheel(e: WheelEvent) {
     e.preventDefault();
-    // Scroll down (positive delta) -> Zoom Out
-    // Scroll up (negative delta) -> Zoom In
     const zoomFactor = 0.1;
     const direction = e.deltaY > 0 ? -1 : 1;
     this.adjustZoom(direction * zoomFactor);
@@ -581,7 +680,7 @@ export class GraphVisualizerComponent {
 
   adjustZoom(delta: number) {
     const newScale = this.scale() + delta;
-    this.scale.set(Math.min(Math.max(0.2, newScale), 5)); // Limits 0.2x to 5x
+    this.scale.set(Math.min(Math.max(0.2, newScale), 5)); 
   }
 
   resetZoom() {
@@ -590,7 +689,7 @@ export class GraphVisualizerComponent {
       this.scale.set(1);
   }
 
-  // --- TREE VIEW LOGIC (Existing) ---
+  // --- TREE VIEW LOGIC ---
   selectNode(node: GraphNode) {
     this.selectedNode.set(node);
     if (node.children.length > 0) {

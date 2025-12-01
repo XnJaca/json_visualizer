@@ -1,3 +1,4 @@
+
 import { Injectable } from '@angular/core';
 
 export interface GraphNode {
@@ -74,5 +75,27 @@ export class JsonTransformService {
 
   private isPrimitive(value: any): boolean {
     return value === null || typeof value !== 'object';
+  }
+
+  // Feature: Generate accessible path string (e.g. data.items[0].id)
+  static getDotNotation(path: string[]): string {
+      if (!path || path.length === 0) return '';
+      
+      // Remove 'root' from the path display for cleaner copy/paste
+      const cleanPath = path[0] === 'root' ? path.slice(1) : path;
+      
+      return cleanPath.reduce((acc, curr, index) => {
+          // Check if current part is an integer (array index)
+          const isIndex = /^\d+$/.test(curr);
+          
+          if (index === 0) return curr;
+          
+          if (isIndex) {
+              return `${acc}[${curr}]`;
+          } else {
+              // If previous was an index, we need a dot? Usually yes: array[0].prop
+              return `${acc}.${curr}`;
+          }
+      }, '');
   }
 }
