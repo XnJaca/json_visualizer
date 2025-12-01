@@ -1,0 +1,5 @@
+{
+  "name": "JSON Crack-style Visualizer",
+  "description": "A powerful interactive JSON visualization tool that transforms raw JSON into a readable, navigable graph structure.",
+  "requestFramePermissions": []
+}

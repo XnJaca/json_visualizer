@@ -1,0 +1,37 @@
+<div class="flex flex-col h-screen w-screen bg-zinc-950">
+  
+  <!-- Header -->
+  <header class="flex-none h-12 border-b border-zinc-800 flex items-center px-4 bg-zinc-950 justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-purple-500/20">
+        J
+      </div>
+      <h1 class="text-zinc-300 font-bold text-sm tracking-tight">JSON<span class="text-zinc-500 font-normal ml-1">Explorer</span></h1>
+    </div>
+    
+    <div class="flex gap-3">
+      <button (click)="loadSample()" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors">
+        Load Sample
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 flex overflow-hidden">
+    <!-- Left Pane: Editor -->
+    <div class="w-1/4 min-w-[250px] max-w-[400px] h-full z-10">
+      <app-json-editor 
+        [jsonString]="jsonString()" 
+        (jsonChange)="updateJson($event)"
+        [error]="error()">
+      </app-json-editor>
+    </div>
+
+    <!-- Right Pane: Visualizer -->
+    <div class="flex-1 h-full relative bg-zinc-900 border-l border-zinc-800">
+      <app-graph-visualizer 
+        [data]="graphData()">
+      </app-graph-visualizer>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom Scrollbar for the dark theme */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #18181b; 
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3f3f46; 
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #52525b; 
+    }
+    
+    /* Graph Styles */
+    .node rect {
+      transition: all 0.3s ease;
+    }
+    .node:hover rect {
+      stroke: #22d3ee; /* cyan-400 */
+      stroke-width: 2px;
+      filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.3));
+    }
+    .link {
+      fill: none;
+      stroke: #52525b; /* zinc-600 */
+      stroke-width: 1.5px;
+      transition: stroke 0.3s ease;
+    }
+    .node:hover ~ .link-source {
+      stroke: #22d3ee;
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "rxjs": "https://aistudiocdn.com/rxjs@^7.8.2?conditions=es2015",
+    "rxjs/operators": "https://aistudiocdn.com/rxjs@^7.8.2/operators?conditions=es2015",
+    "rxjs/ajax": "https://aistudiocdn.com/rxjs@^7.8.2/ajax?conditions=es2015",
+    "rxjs/webSocket": "https://aistudiocdn.com/rxjs@^7.8.2/webSocket?conditions=es2015",
+    "rxjs/testing": "https://aistudiocdn.com/rxjs@^7.8.2/testing?conditions=es2015",
+    "rxjs/fetch": "https://aistudiocdn.com/rxjs@^7.8.2/fetch?conditions=es2015",
+    "@angular/platform-browser": "https://next.esm.sh/@angular/platform-browser@^21.0.2?external=rxjs",
+    "@angular/core": "https://next.esm.sh/@angular/core@^21.0.2?external=rxjs",
+    "@angular/compiler": "https://next.esm.sh/@angular/compiler@^21.0.2?external=rxjs",
+    "d3": "https://next.esm.sh/d3@^7.9.0?external=rxjs",
+    "mermaid": "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs",
+    "@angular/common": "https://next.esm.sh/@angular/common@^21.0.2?external=rxjs"
+  }
+}
+</script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 overflow-hidden h-screen w-screen">
+  <app-root></app-root>
+</body>
+</html>
