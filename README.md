@@ -1,20 +1,49 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Sonda
 
-# Run and deploy your AI Studio app
+**Navigate JSON, don't just stare at it.**
 
-This contains everything you need to run your app locally.
+A modern JSON explorer that keeps you oriented. Unlike tools that generate infinite sprawling diagrams where you lose context, Sonda lets you navigate progressively with full awareness of where you are.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1pDw4I0ScIxYJmCcmtKkZyNqYzgNToUIY
+## Features
+
+- **Tree Inspector** - Hierarchical navigation with expandable nodes
+- **Relation Graph** - Visual diagram of JSON structure with Mermaid
+- **JSON Compare** - Side-by-side diff with added/removed/modified highlighting
+- **JMESPath Filtering** - Advanced query language for filtering data
+- **Context Awareness** - Breadcrumbs, inspector panel, and path copying
+- **Dark/Light Mode** - Full theme support
+- **Tools** - Sort keys, minify, repair, format, download
+
+## Why Sonda?
+
+| Other Tools | Sonda |
+|-------------|-------|
+| Infinite sprawling graphs | Progressive navigation |
+| Lose context quickly | Breadcrumbs + Inspector panel |
+| View only | Compare two JSONs |
+| Basic filtering | JMESPath queries |
+
+## Tech Stack
+
+- Angular 21 (Signals, Standalone Components, Zoneless)
+- Tailwind CSS
+- Mermaid (Graph rendering)
+- JMESPath (Filtering)
+- TypeScript
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+```bash
+npm install
+npm run dev
+```
 
+## Build
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm run build
+```
+
+## License
+
+MIT

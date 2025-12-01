@@ -8,9 +8,9 @@
   <header class="flex-none h-12 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 bg-white dark:bg-zinc-950 justify-between transition-colors duration-300 z-30">
     <div class="flex items-center gap-2">
       <div class="w-6 h-6 rounded bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-purple-500/20">
-        J
+        S
       </div>
-      <h1 class="text-zinc-700 dark:text-zinc-300 font-bold text-sm tracking-tight hidden sm:block">JSON<span class="text-zinc-400 dark:text-zinc-500 font-normal ml-1">Explorer</span></h1>
+      <h1 class="text-zinc-700 dark:text-zinc-300 font-bold text-sm tracking-tight hidden sm:block">Sonda</h1>
       
       <!-- Feature 5: Advanced Filtering (JMESPath) -->
       <div class="ml-6 flex items-center group relative w-64 md:w-96">
@@ -60,8 +60,102 @@
       <button (click)="loadSample()" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
         Sample
       </button>
+
+      <button (click)="showAboutModal.set(true)" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-gradient-to-r from-cyan-500 to-purple-600 text-white hover:from-cyan-600 hover:to-purple-700 transition-all shadow-sm">
+        About
+      </button>
     </div>
   </header>
+
+  <!-- About Modal -->
+  @if (showAboutModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" (click)="showAboutModal.set(false)">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+      <!-- Modal -->
+      <div class="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-zinc-200 dark:border-zinc-800" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="relative h-32 bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/10"></div>
+          <div class="relative flex items-center gap-3">
+            <div class="w-14 h-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+              S
+            </div>
+            <div>
+              <h2 class="text-3xl font-bold text-white tracking-tight">Sonda</h2>
+              <p class="text-white/80 text-sm">JSON Explorer</p>
+            </div>
+          </div>
+
+          <!-- Close button -->
+          <button (click)="showAboutModal.set(false)" class="absolute top-3 right-3 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+          <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed mb-4">
+            <strong class="text-zinc-800 dark:text-zinc-200">Navigate JSON, don't just stare at it.</strong>
+          </p>
+
+          <p class="text-zinc-500 dark:text-zinc-500 text-sm leading-relaxed mb-6">
+            A modern JSON explorer that keeps you oriented. Unlike tools that generate infinite sprawling diagrams where you lose context, Sonda lets you navigate progressively with full awareness of where you are.
+          </p>
+
+          <!-- Features -->
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+              Tree Inspector
+            </div>
+            <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              Relation Graph
+            </div>
+            <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              JSON Compare
+            </div>
+            <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
+              JMESPath Queries
+            </div>
+            <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Context Awareness
+            </div>
+            <div class="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+              Dark/Light Mode
+            </div>
+          </div>
+
+          <!-- Tech Stack -->
+          <div class="flex flex-wrap gap-2 mb-6">
+            <span class="px-2 py-1 text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded">Angular 21</span>
+            <span class="px-2 py-1 text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded">Tailwind CSS</span>
+            <span class="px-2 py-1 text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded">Mermaid</span>
+            <span class="px-2 py-1 text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded">JMESPath</span>
+          </div>
+
+          <!-- Footer -->
+          <div class="pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <div class="flex items-center justify-center gap-2 mb-2">
+              <span class="text-xs text-zinc-600 dark:text-zinc-400">Created & Designed by</span>
+              <span class="text-xs font-bold bg-gradient-to-r from-cyan-500 to-purple-600 bg-clip-text text-transparent">XnJaca</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-zinc-400">
+              <span>v1.0.0</span>
+              <span>Built with Angular 21</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Main Content -->
   <main class="flex-1 flex overflow-hidden relative">

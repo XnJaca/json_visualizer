@@ -250,16 +250,19 @@ const LOCAL_STORAGE_KEY = 'json_explorer_content';
 export class AppComponent {
   jsonString = signal<string>('');
   themeService = inject(ThemeService);
-  
+
   // Feature 5: Filtering
   filterQuery = signal<string>('');
-  
+
   // Feature 2: Resizing
   editorWidth = signal<number>(400); // Initial width
   isDraggingSplitter = false;
-  
+
   // Feature 4: Focus Mode
   isFocusMode = signal<boolean>(false);
+
+  // About Modal
+  showAboutModal = signal<boolean>(false);
 
   // Computed state derived from jsonString and filter
   parseResult = computed(() => {

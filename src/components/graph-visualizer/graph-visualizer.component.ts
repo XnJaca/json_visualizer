@@ -5,6 +5,24 @@ import { GraphNode, JsonTransformService } from '../../services/json-transform.s
 import { ThemeService } from '../../services/theme.service';
 import mermaid from 'mermaid';
 
+// Diff Types
+interface DiffChange {
+  path: string;
+  type: 'added' | 'removed' | 'modified' | 'unchanged';
+  leftValue?: any;
+  rightValue?: any;
+}
+
+interface DiffResult {
+  changes: DiffChange[];
+  stats: {
+    added: number;
+    removed: number;
+    modified: number;
+    unchanged: number;
+  };
+}
+
 @Component({
   selector: 'app-graph-visualizer',
   standalone: true,
@@ -15,8 +33,8 @@ import mermaid from 'mermaid';
       <!-- TOOLBAR & VIEW SWITCHER -->
       <div class="h-12 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-between px-4 shrink-0 z-20 transition-colors duration-300">
         
-        <!-- Search (Both Views) - Feature 4 -->
-        <div class="flex items-center gap-4 w-1/3">
+        <!-- Search (Tree & Graph Views) - Feature 4 -->
+        <div class="flex items-center gap-4 w-1/3" [class.invisible]="viewMode() === 'compare'">
           <div class="relative w-full max-w-xs group">
             <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 group-focus-within:text-cyan-600 dark:group-focus-within:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <input 
@@ -44,7 +62,7 @@ import mermaid from 'mermaid';
             Tree Inspector
           </button>
           <div class="w-px h-4 bg-zinc-300 dark:bg-zinc-800 mx-1"></div>
-          <button 
+          <button
             (click)="setViewMode('graph')"
              [class.bg-white]="viewMode() === 'graph'"
             [class.dark:bg-zinc-800]="viewMode() === 'graph'"
@@ -55,6 +73,19 @@ import mermaid from 'mermaid';
             class="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-all hover:text-zinc-700 dark:hover:text-zinc-200">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
             Relation Graph
+          </button>
+          <div class="w-px h-4 bg-zinc-300 dark:bg-zinc-800 mx-1"></div>
+          <button
+            (click)="setViewMode('compare')"
+            [class.bg-white]="viewMode() === 'compare'"
+            [class.dark:bg-zinc-800]="viewMode() === 'compare'"
+            [class.shadow-sm]="viewMode() === 'compare'"
+            [class.text-amber-600]="viewMode() === 'compare'"
+            [class.dark:text-amber-400]="viewMode() === 'compare'"
+            [class.text-zinc-500]="viewMode() !== 'compare'"
+            class="flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-all hover:text-zinc-700 dark:hover:text-zinc-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Compare
           </button>
         </div>
       </div>
@@ -121,6 +152,160 @@ import mermaid from 'mermaid';
              </div>
         </div>
 
+        <!-- COMPARE VIEW IMPLEMENTATION -->
+        <div class="absolute inset-0 z-0 bg-zinc-50 dark:bg-[#09090b] overflow-hidden flex flex-col transition-colors duration-300"
+             [class.hidden]="viewMode() !== 'compare'">
+
+          <!-- Compare Header with Stats -->
+          @if (diffResult()) {
+            <div class="flex items-center justify-between px-4 py-2 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+              <div class="flex items-center gap-4 text-xs">
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span class="text-zinc-600 dark:text-zinc-400">Added: <strong class="text-emerald-600 dark:text-emerald-400">{{ diffResult()!.stats.added }}</strong></span>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                  <span class="text-zinc-600 dark:text-zinc-400">Removed: <strong class="text-red-600 dark:text-red-400">{{ diffResult()!.stats.removed }}</strong></span>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span class="text-zinc-600 dark:text-zinc-400">Modified: <strong class="text-amber-600 dark:text-amber-400">{{ diffResult()!.stats.modified }}</strong></span>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-zinc-400"></span>
+                  <span class="text-zinc-600 dark:text-zinc-400">Unchanged: <strong>{{ diffResult()!.stats.unchanged }}</strong></span>
+                </span>
+              </div>
+              <button (click)="clearCompare()" class="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                Clear Results
+              </button>
+            </div>
+          }
+
+          <!-- Main Compare Area -->
+          <div class="flex-1 flex overflow-hidden">
+
+            <!-- Left JSON Panel -->
+            <div class="flex-1 flex flex-col border-r border-zinc-200 dark:border-zinc-800">
+              <div class="flex items-center justify-between px-3 py-2 bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+                <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
+                  Original (Left)
+                </span>
+                <button (click)="loadCurrentToLeft()" class="text-[10px] px-2 py-0.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                  Load Current
+                </button>
+              </div>
+              <textarea
+                [value]="compareJsonLeft()"
+                (input)="updateCompareLeft($event)"
+                class="flex-1 w-full bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 p-4 font-mono text-xs leading-5 resize-none focus:outline-none border-none transition-colors"
+                spellcheck="false"
+                placeholder="Paste original JSON here..."
+              ></textarea>
+            </div>
+
+            <!-- Compare Button (Center) -->
+            <div class="flex flex-col items-center justify-center w-16 bg-zinc-100 dark:bg-zinc-900 border-x border-zinc-200 dark:border-zinc-800">
+              <button
+                (click)="runCompare()"
+                class="p-3 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                title="Compare JSONs">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+              </button>
+              <span class="text-[9px] text-zinc-500 mt-2 uppercase font-bold tracking-wider">Compare</span>
+            </div>
+
+            <!-- Right JSON Panel -->
+            <div class="flex-1 flex flex-col">
+              <div class="flex items-center justify-between px-3 py-2 bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+                <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                  Modified (Right)
+                </span>
+                <button (click)="loadCurrentToRight()" class="text-[10px] px-2 py-0.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                  Load Current
+                </button>
+              </div>
+              <textarea
+                [value]="compareJsonRight()"
+                (input)="updateCompareRight($event)"
+                class="flex-1 w-full bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 p-4 font-mono text-xs leading-5 resize-none focus:outline-none border-none transition-colors"
+                spellcheck="false"
+                placeholder="Paste modified JSON here..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Error Display -->
+          @if (compareError()) {
+            <div class="absolute bottom-4 left-4 right-4 bg-red-100 dark:bg-red-900/80 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-2 rounded-lg text-xs font-mono backdrop-blur-sm shadow-lg">
+              {{ compareError() }}
+            </div>
+          }
+
+          <!-- Diff Results Panel -->
+          @if (diffResult() && diffResult()!.changes.length > 0) {
+            <div class="h-1/2 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
+                <span class="text-xs font-bold uppercase tracking-wider text-zinc-500">Differences</span>
+                <span class="text-xs text-zinc-400">{{ diffResult()!.changes.length }} changes found</span>
+              </div>
+              <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <table class="w-full text-xs">
+                  <thead class="bg-zinc-100 dark:bg-zinc-900 sticky top-0">
+                    <tr class="text-zinc-500 uppercase text-[10px] tracking-wider">
+                      <th class="px-4 py-2 text-left w-16">Type</th>
+                      <th class="px-4 py-2 text-left">Path</th>
+                      <th class="px-4 py-2 text-left">Original Value</th>
+                      <th class="px-4 py-2 text-left">New Value</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @for (change of diffResult()!.changes; track change.path) {
+                      <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                          [class.bg-emerald-50]="change.type === 'added'"
+                          [class.dark:bg-emerald-900/10]="change.type === 'added'"
+                          [class.bg-red-50]="change.type === 'removed'"
+                          [class.dark:bg-red-900/10]="change.type === 'removed'"
+                          [class.bg-amber-50]="change.type === 'modified'"
+                          [class.dark:bg-amber-900/10]="change.type === 'modified'">
+                        <td class="px-4 py-2">
+                          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase"
+                                [class.bg-emerald-100]="change.type === 'added'"
+                                [class.text-emerald-700]="change.type === 'added'"
+                                [class.dark:bg-emerald-900/30]="change.type === 'added'"
+                                [class.dark:text-emerald-400]="change.type === 'added'"
+                                [class.bg-red-100]="change.type === 'removed'"
+                                [class.text-red-700]="change.type === 'removed'"
+                                [class.dark:bg-red-900/30]="change.type === 'removed'"
+                                [class.dark:text-red-400]="change.type === 'removed'"
+                                [class.bg-amber-100]="change.type === 'modified'"
+                                [class.text-amber-700]="change.type === 'modified'"
+                                [class.dark:bg-amber-900/30]="change.type === 'modified'"
+                                [class.dark:text-amber-400]="change.type === 'modified'">
+                            {{ change.type }}
+                          </span>
+                        </td>
+                        <td class="px-4 py-2 font-mono text-zinc-700 dark:text-zinc-300">{{ change.path }}</td>
+                        <td class="px-4 py-2 font-mono text-zinc-500 dark:text-zinc-500 max-w-xs truncate" [title]="formatDiffValue(change.leftValue)">
+                          {{ change.type === 'added' ? '-' : formatDiffValue(change.leftValue) }}
+                        </td>
+                        <td class="px-4 py-2 font-mono text-zinc-700 dark:text-zinc-300 max-w-xs truncate" [title]="formatDiffValue(change.rightValue)">
+                          {{ change.type === 'removed' ? '-' : formatDiffValue(change.rightValue) }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        </div>
+
         <!-- Graph Mode Inspector Drawer (Draggable & Minimizable) -->
         @if (viewMode() === 'graph' && selectedNode()) {
             <div class="absolute w-96 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-xl z-20 flex flex-col overflow-hidden animate-in fade-in duration-200"
@@ -152,7 +337,7 @@ import mermaid from 'mermaid';
                 </div>
 
                 <!-- Content -->
-                <div [class.hidden]="isInspectorMinimized()" class="flex-1 overflow-hidden relative" style="max-height: 80vh;">
+                <div [class.hidden]="isInspectorMinimized()" class="flex flex-col" style="max-height: 60vh;">
                     <ng-container *ngTemplateOutlet="inspectorTemplate"></ng-container>
                 </div>
             </div>
@@ -471,7 +656,13 @@ export class GraphVisualizerComponent {
   
   selectedNode = signal<GraphNode | null>(null);
   searchTerm = signal<string>('');
-  viewMode = signal<'tree' | 'graph'>('tree');
+  viewMode = signal<'tree' | 'graph' | 'compare'>('tree');
+
+  // Compare Mode State
+  compareJsonLeft = signal<string>('');
+  compareJsonRight = signal<string>('');
+  diffResult = signal<DiffResult | null>(null);
+  compareError = signal<string | null>(null);
   
   // Pan Zoom State (Signals)
   panX = signal(0);
@@ -640,9 +831,8 @@ export class GraphVisualizerComponent {
       });
   }
 
-  setViewMode(mode: 'tree' | 'graph') {
+  setViewMode(mode: 'tree' | 'graph' | 'compare') {
     this.viewMode.set(mode);
-    // Reset zoom when switching to graph? Maybe not.
   }
 
   // --- FEATURE 4: GRAPH SEARCH ---
@@ -887,5 +1077,207 @@ export class GraphVisualizerComponent {
 
   getChildrenKeys(node: GraphNode): string {
       return node.children.map(c => c.key).join(', ');
+  }
+
+  // --- COMPARE MODE METHODS ---
+  updateCompareLeft(e: Event) {
+    const val = (e.target as HTMLTextAreaElement).value;
+    this.compareJsonLeft.set(val);
+    this.compareError.set(null);
+  }
+
+  updateCompareRight(e: Event) {
+    const val = (e.target as HTMLTextAreaElement).value;
+    this.compareJsonRight.set(val);
+    this.compareError.set(null);
+  }
+
+  loadCurrentToLeft() {
+    const currentData = this.data();
+    if (currentData) {
+      // Reconstruct JSON from data - we need to get original JSON
+      // Since we don't have direct access, we'll use a workaround
+      // by emitting an event or accessing via injection
+      // For now, let's just notify the user they can paste
+      try {
+        const reconstructed = this.reconstructJson(currentData);
+        this.compareJsonLeft.set(JSON.stringify(reconstructed, null, 2));
+      } catch {
+        this.compareError.set('Could not load current JSON');
+      }
+    }
+  }
+
+  loadCurrentToRight() {
+    const currentData = this.data();
+    if (currentData) {
+      try {
+        const reconstructed = this.reconstructJson(currentData);
+        this.compareJsonRight.set(JSON.stringify(reconstructed, null, 2));
+      } catch {
+        this.compareError.set('Could not load current JSON');
+      }
+    }
+  }
+
+  private reconstructJson(node: GraphNode): any {
+    if (node.type === 'primitive') {
+      return node.value;
+    }
+
+    if (node.type === 'array') {
+      const arr: any[] = [];
+      // Add primitive content first (though arrays usually don't have direct primitives)
+      // Then add children
+      node.children.forEach(child => {
+        arr.push(this.reconstructJson(child));
+      });
+      return arr;
+    }
+
+    // Object
+    const obj: any = {};
+    // Add primitive properties
+    node.content.forEach(prop => {
+      obj[prop.key] = prop.value;
+    });
+    // Add nested objects/arrays
+    node.children.forEach(child => {
+      obj[child.key] = this.reconstructJson(child);
+    });
+    return obj;
+  }
+
+  runCompare() {
+    this.compareError.set(null);
+    this.diffResult.set(null);
+
+    const leftJson = this.compareJsonLeft().trim();
+    const rightJson = this.compareJsonRight().trim();
+
+    if (!leftJson || !rightJson) {
+      this.compareError.set('Please provide JSON in both panels');
+      return;
+    }
+
+    let leftObj: any;
+    let rightObj: any;
+
+    try {
+      leftObj = JSON.parse(leftJson);
+    } catch (e) {
+      this.compareError.set('Invalid JSON in left panel: ' + (e as Error).message);
+      return;
+    }
+
+    try {
+      rightObj = JSON.parse(rightJson);
+    } catch (e) {
+      this.compareError.set('Invalid JSON in right panel: ' + (e as Error).message);
+      return;
+    }
+
+    // Run diff
+    const changes = this.deepDiff(leftObj, rightObj, '');
+    const stats = {
+      added: changes.filter(c => c.type === 'added').length,
+      removed: changes.filter(c => c.type === 'removed').length,
+      modified: changes.filter(c => c.type === 'modified').length,
+      unchanged: changes.filter(c => c.type === 'unchanged').length
+    };
+
+    // Filter out unchanged for display (too noisy)
+    const filteredChanges = changes.filter(c => c.type !== 'unchanged');
+
+    this.diffResult.set({ changes: filteredChanges, stats });
+  }
+
+  private deepDiff(left: any, right: any, path: string): DiffChange[] {
+    const changes: DiffChange[] = [];
+    const currentPath = path || '$';
+
+    // Handle null/undefined
+    if (left === null && right === null) {
+      return [{ path: currentPath, type: 'unchanged', leftValue: null, rightValue: null }];
+    }
+    if (left === undefined && right === undefined) {
+      return [];
+    }
+    if (left === null || left === undefined) {
+      return [{ path: currentPath, type: 'added', rightValue: right }];
+    }
+    if (right === null || right === undefined) {
+      return [{ path: currentPath, type: 'removed', leftValue: left }];
+    }
+
+    // Different types
+    const leftType = Array.isArray(left) ? 'array' : typeof left;
+    const rightType = Array.isArray(right) ? 'array' : typeof right;
+
+    if (leftType !== rightType) {
+      return [{ path: currentPath, type: 'modified', leftValue: left, rightValue: right }];
+    }
+
+    // Primitives
+    if (leftType !== 'object' && leftType !== 'array') {
+      if (left === right) {
+        return [{ path: currentPath, type: 'unchanged', leftValue: left, rightValue: right }];
+      }
+      return [{ path: currentPath, type: 'modified', leftValue: left, rightValue: right }];
+    }
+
+    // Arrays
+    if (leftType === 'array') {
+      const maxLen = Math.max(left.length, right.length);
+      for (let i = 0; i < maxLen; i++) {
+        const itemPath = `${currentPath}[${i}]`;
+        if (i >= left.length) {
+          changes.push({ path: itemPath, type: 'added', rightValue: right[i] });
+        } else if (i >= right.length) {
+          changes.push({ path: itemPath, type: 'removed', leftValue: left[i] });
+        } else {
+          changes.push(...this.deepDiff(left[i], right[i], itemPath));
+        }
+      }
+      return changes;
+    }
+
+    // Objects
+    const allKeys = new Set([...Object.keys(left), ...Object.keys(right)]);
+    for (const key of allKeys) {
+      const keyPath = currentPath === '$' ? key : `${currentPath}.${key}`;
+      const hasLeft = key in left;
+      const hasRight = key in right;
+
+      if (!hasLeft) {
+        changes.push({ path: keyPath, type: 'added', rightValue: right[key] });
+      } else if (!hasRight) {
+        changes.push({ path: keyPath, type: 'removed', leftValue: left[key] });
+      } else {
+        changes.push(...this.deepDiff(left[key], right[key], keyPath));
+      }
+    }
+
+    return changes;
+  }
+
+  clearCompare() {
+    this.diffResult.set(null);
+    this.compareError.set(null);
+  }
+
+  formatDiffValue(val: any): string {
+    if (val === undefined) return 'undefined';
+    if (val === null) return 'null';
+    if (typeof val === 'object') {
+      try {
+        const str = JSON.stringify(val);
+        return str.length > 50 ? str.substring(0, 50) + '...' : str;
+      } catch {
+        return '[Object]';
+      }
+    }
+    const str = String(val);
+    return str.length > 50 ? str.substring(0, 50) + '...' : str;
   }
 }
