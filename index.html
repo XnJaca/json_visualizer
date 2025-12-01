@@ -1,44 +1,53 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JSON Visualizer</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            zinc: {
+              950: '#09090b', // Custom darker zinc for better contrast
+            }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    /* Custom Scrollbar for the dark theme */
+    /* Custom Scrollbar */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
     }
+    
+    /* Light Mode Scrollbar */
     ::-webkit-scrollbar-track {
-      background: #18181b; 
+      background: #f4f4f5; 
     }
     ::-webkit-scrollbar-thumb {
-      background: #3f3f46; 
+      background: #d4d4d8; 
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
+      background: #a1a1aa; 
+    }
+
+    /* Dark Mode Scrollbar */
+    .dark ::-webkit-scrollbar-track {
+      background: #18181b; 
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #3f3f46; 
+    }
+    .dark ::-webkit-scrollbar-thumb:hover {
       background: #52525b; 
-    }
-    
-    /* Graph Styles */
-    .node rect {
-      transition: all 0.3s ease;
-    }
-    .node:hover rect {
-      stroke: #22d3ee; /* cyan-400 */
-      stroke-width: 2px;
-      filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.3));
-    }
-    .link {
-      fill: none;
-      stroke: #52525b; /* zinc-600 */
-      stroke-width: 1.5px;
-      transition: stroke 0.3s ease;
-    }
-    .node:hover ~ .link-source {
-      stroke: #22d3ee;
     }
   </style>
 <script type="importmap">
@@ -60,7 +69,7 @@
 }
 </script>
 </head>
-<body class="bg-zinc-950 text-zinc-100 overflow-hidden h-screen w-screen">
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden h-screen w-screen transition-colors duration-300">
   <app-root></app-root>
 </body>
 </html>

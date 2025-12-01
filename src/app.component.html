@@ -1,16 +1,28 @@
-<div class="flex flex-col h-screen w-screen bg-zinc-950">
+
+<div class="flex flex-col h-screen w-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300">
   
   <!-- Header -->
-  <header class="flex-none h-12 border-b border-zinc-800 flex items-center px-4 bg-zinc-950 justify-between">
+  <header class="flex-none h-12 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 bg-white dark:bg-zinc-950 justify-between transition-colors duration-300">
     <div class="flex items-center gap-2">
       <div class="w-6 h-6 rounded bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-purple-500/20">
         J
       </div>
-      <h1 class="text-zinc-300 font-bold text-sm tracking-tight">JSON<span class="text-zinc-500 font-normal ml-1">Explorer</span></h1>
+      <h1 class="text-zinc-700 dark:text-zinc-300 font-bold text-sm tracking-tight">JSON<span class="text-zinc-400 dark:text-zinc-500 font-normal ml-1">Explorer</span></h1>
     </div>
     
-    <div class="flex gap-3">
-      <button (click)="loadSample()" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors">
+    <div class="flex gap-3 items-center">
+      <!-- Theme Toggle -->
+      <button (click)="themeService.toggle()" class="p-1.5 rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
+        @if (themeService.mode() === 'dark') {
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        } @else {
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        }
+      </button>
+      
+      <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1"></div>
+
+      <button (click)="loadSample()" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
         Load Sample
       </button>
     </div>
@@ -28,7 +40,7 @@
     </div>
 
     <!-- Right Pane: Visualizer -->
-    <div class="flex-1 h-full relative bg-zinc-900 border-l border-zinc-800">
+    <div class="flex-1 h-full relative bg-zinc-50 dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800">
       <app-graph-visualizer 
         [data]="graphData()">
       </app-graph-visualizer>

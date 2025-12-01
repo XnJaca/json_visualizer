@@ -1,8 +1,9 @@
 
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, inject } from '@angular/core';
 import { JsonEditorComponent } from './components/json-editor/json-editor.component';
 import { GraphVisualizerComponent } from './components/graph-visualizer/graph-visualizer.component';
 import { JsonTransformService, GraphNode } from './services/json-transform.service';
+import { ThemeService } from './services/theme.service';
 
 // Use a Template Literal for safety with newlines and escaped characters
 const DEFAULT_JSON_STR = `
@@ -245,6 +246,7 @@ const DEFAULT_JSON_STR = `
 })
 export class AppComponent {
   jsonString = signal<string>('');
+  themeService = inject(ThemeService);
   
   // Computed state derived from jsonString
   parseResult = computed(() => {
